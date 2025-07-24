@@ -4,13 +4,12 @@ A comprehensive Tauri plugin for integrating Model Context Protocol (MCP) server
 
 ## Features
 
-- 🚀 **Full MCP Protocol Support** - Complete JSON-RPC 2.0 implementation
+- 🚀 **MCP Stdio transport Support** - Complete JSON-RPC 2.0 implementation
 - 🔗 **Multi-Server Management** - Connect to multiple MCP servers simultaneously  
 - 🛠️ **Tool Execution** - Execute MCP tools with full parameter support
 - 📡 **Real-time Events** - Connection status updates and process monitoring
 - 🧵 **Thread-Safe** - Atomic message ID generation and concurrent operations
 - 🎯 **TypeScript Support** - Fully typed API with comprehensive interfaces
-- ✅ **Production Ready** - Extensive test suite (37 tests) and error handling
 - 📚 **Well Documented** - Complete API reference and integration examples
 
 ## Quick Start
