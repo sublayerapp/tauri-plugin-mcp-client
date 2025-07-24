@@ -1,0 +1,30 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "Default plugin permissions"
+permissions = [
+    "allow-health-check",
+    "allow-get-connection-statuses", 
+    "allow-plugin-connect-server",
+    "allow-plugin-disconnect-server"
+]
+
+[[permission]]
+identifier = "allow-health-check"  
+description = "Allows executing health_check"
+commands.allow = ["health_check"]
+
+[[permission]]
+identifier = "allow-get-connection-statuses"
+description = "Allows getting connection statuses"
+commands.allow = ["get_connection_statuses"]
+
+[[permission]]
+identifier = "allow-plugin-connect-server"
+description = "Allows connecting to MCP servers through plugin"
+commands.allow = ["plugin_connect_server"]
+
+[[permission]]
+identifier = "allow-plugin-disconnect-server"
+description = "Allows disconnecting from MCP servers through plugin"
+commands.allow = ["plugin_disconnect_server"]

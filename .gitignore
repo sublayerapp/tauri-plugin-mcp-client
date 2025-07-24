@@ -1,0 +1,82 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node.js / TypeScript (guest-js directory)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# TypeScript build outputs
+guest-js/dist/
+guest-js/build/
+*.tsbuildinfo
+
+# Package manager locks (keep pnpm-lock.yaml, ignore others)
+guest-js/package-lock.json
+guest-js/yarn.lock
+
+# Test coverage
+coverage/
+*.lcov
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# OS generated files
+Icon?
+.Spotlight-V100
+.Trashes
+ehthumbs_vista.db
+
+# Tauri specific
+src-tauri/target/
+
+# Build outputs
+dist/
+build/
+out/
