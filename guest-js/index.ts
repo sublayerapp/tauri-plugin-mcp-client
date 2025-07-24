@@ -37,7 +37,7 @@ export interface ConnectServerRequest {
   args: string[];
 }
 
-// Tool-related types (matching Protocollie's interfaces)
+// Tool-related types for MCP protocol
 export interface ToolParameter {
   type: string;
   description?: string;
@@ -60,7 +60,7 @@ export interface ToolsResponse {
   tools: Tool[];
 }
 
-// Tool execution types (matching Protocollie's interfaces)
+// Tool execution types for MCP protocol
 export interface ExecuteToolRequest {
   server_id: string;
   tool_name: string;

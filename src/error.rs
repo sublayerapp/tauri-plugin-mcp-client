@@ -32,7 +32,7 @@ impl fmt::Display for ErrorCategory {
 
 /// Enhanced error type with category, code, message, and context
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProtocollieError {
+pub struct MCPClientError {
     pub category: ErrorCategory,
     pub code: String,
     pub message: String,
@@ -40,7 +40,7 @@ pub struct ProtocollieError {
     pub suggestions: Vec<String>,
 }
 
-impl ProtocollieError {
+impl MCPClientError {
     pub fn new(category: ErrorCategory, code: &str, message: &str) -> Self {
         Self {
             category,
@@ -179,7 +179,7 @@ impl ProtocollieError {
     }
 }
 
-impl fmt::Display for ProtocollieError {
+impl fmt::Display for MCPClientError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{}:{}] {}", self.category, self.code, self.message)?;
         if let Some(details) = &self.details {
@@ -196,7 +196,7 @@ impl fmt::Display for ProtocollieError {
 }
 
 /// Analyze a generic error string and convert to structured error
-pub fn analyze_error(error_str: &str) -> ProtocollieError {
+pub fn analyze_error(error_str: &str) -> MCPClientError {
     let error_lower = error_str.to_lowercase();
 
     // Command not found errors
@@ -204,18 +204,18 @@ pub fn analyze_error(error_str: &str) -> ProtocollieError {
         || error_lower.contains("command not found")
     {
         let command = extract_command_from_error(error_str).unwrap_or("unknown");
-        return ProtocollieError::command_not_found(command);
+        return MCPClientError::command_not_found(command);
     }
 
     // Permission errors
     if error_lower.contains("permission denied") {
         let resource = extract_resource_from_error(error_str).unwrap_or("resource");
-        return ProtocollieError::permission_denied(resource);
+        return MCPClientError::permission_denied(resource);
     }
 
     // Timeout errors
     if error_lower.contains("timeout") {
-        return ProtocollieError::connection_timeout("server", 5000);
+        return MCPClientError::connection_timeout("server", 5000);
     }
 
     // Protocol errors
@@ -223,12 +223,12 @@ pub fn analyze_error(error_str: &str) -> ProtocollieError {
         || error_lower.contains("protocol")
         || error_lower.contains("json-rpc")
     {
-        return ProtocollieError::protocol_error(error_str);
+        return MCPClientError::protocol_error(error_str);
     }
 
     // Database errors
     if error_lower.contains("database") || error_lower.contains("sqlite") {
-        return ProtocollieError::database_error("operation", error_str);
+        return MCPClientError::database_error("operation", error_str);
     }
 
     // Configuration errors
@@ -236,11 +236,11 @@ pub fn analyze_error(error_str: &str) -> ProtocollieError {
         || error_lower.contains("missing")
         || error_lower.contains("invalid")
     {
-        return ProtocollieError::configuration_error("field", error_str);
+        return MCPClientError::configuration_error("field", error_str);
     }
 
     // Default to system error
-    ProtocollieError::system_error(error_str)
+    MCPClientError::system_error(error_str)
 }
 
 /// Extract command name from error message
@@ -292,5 +292,5 @@ pub fn format_config_error(error: &str) -> String {
 }
 
 pub fn format_app_data_error() -> String {
-    ProtocollieError::system_error("Unable to access application data directory").to_string()
+    MCPClientError::system_error("Unable to access application data directory").to_string()
 }

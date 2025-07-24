@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use crate::process::MCPProcess;
-use crate::error::ProtocollieError;
+use crate::error::MCPClientError;
 use tauri::{AppHandle, Emitter, Runtime};
 
 /// Event types for real-time MCP connection updates
@@ -33,7 +33,7 @@ pub struct ConnectionInfo {
 }
 
 /// Plugin-specific connection registry to track MCP server connections
-/// This runs independently from Protocollie's main MCP system
+/// This runs independently from any main MCP system
 pub struct ConnectionRegistry<R: Runtime = tauri::Wry> {
     connections: Arc<Mutex<HashMap<String, ConnectionInfo>>>,
     processes: Arc<Mutex<HashMap<String, MCPProcess>>>,
@@ -78,7 +78,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
     }
 
     /// Connect to an MCP server through the plugin
-    pub async fn connect_server(&self, server_id: String, command: String, args: Vec<String>) -> Result<(), ProtocollieError> {
+    pub async fn connect_server(&self, server_id: String, command: String, args: Vec<String>) -> Result<(), MCPClientError> {
         eprintln!("DEBUG: Plugin connect_server called for {} with command: {} {:?}", server_id, command, args);
 
         // Stop existing process if any (silently, without emitting events)
@@ -96,7 +96,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                 // Store the process
                 {
                     let mut processes = self.processes.lock()
-                        .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock processes: {}", e)))?;
+                        .map_err(|e| MCPClientError::system_error(&format!("Failed to lock processes: {}", e)))?;
                     processes.insert(server_id.clone(), process);
                 }
 
@@ -114,7 +114,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
 
                 {
                     let mut connections = self.connections.lock()
-                        .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock connections: {}", e)))?;
+                        .map_err(|e| MCPClientError::system_error(&format!("Failed to lock connections: {}", e)))?;
                     connections.insert(server_id.clone(), connection_info);
                 }
 
@@ -143,13 +143,13 @@ impl<R: Runtime> ConnectionRegistry<R> {
     }
 
     /// Disconnect from an MCP server silently (no events)
-    async fn disconnect_server_silent(&self, server_id: &str) -> Result<(), ProtocollieError> {
+    async fn disconnect_server_silent(&self, server_id: &str) -> Result<(), MCPClientError> {
         eprintln!("DEBUG: Plugin disconnect_server_silent called for {}", server_id);
 
         // Remove and stop the process
         {
             let mut processes = self.processes.lock()
-                .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock processes: {}", e)))?;
+                .map_err(|e| MCPClientError::system_error(&format!("Failed to lock processes: {}", e)))?;
             
             if let Some(mut process) = processes.remove(server_id) {
                 process.stop();
@@ -160,7 +160,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
         // Remove connection info
         {
             let mut connections = self.connections.lock()
-                .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock connections: {}", e)))?;
+                .map_err(|e| MCPClientError::system_error(&format!("Failed to lock connections: {}", e)))?;
             connections.remove(server_id);
         }
 
@@ -169,13 +169,13 @@ impl<R: Runtime> ConnectionRegistry<R> {
     }
 
     /// Disconnect from an MCP server
-    pub async fn disconnect_server(&self, server_id: &str) -> Result<(), ProtocollieError> {
+    pub async fn disconnect_server(&self, server_id: &str) -> Result<(), MCPClientError> {
         eprintln!("DEBUG: Plugin disconnect_server called for {}", server_id);
 
         // Remove and stop the process
         {
             let mut processes = self.processes.lock()
-                .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock processes: {}", e)))?;
+                .map_err(|e| MCPClientError::system_error(&format!("Failed to lock processes: {}", e)))?;
             
             if let Some(mut process) = processes.remove(server_id) {
                 process.stop();
@@ -186,7 +186,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
         // Remove connection info
         {
             let mut connections = self.connections.lock()
-                .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock connections: {}", e)))?;
+                .map_err(|e| MCPClientError::system_error(&format!("Failed to lock connections: {}", e)))?;
             connections.remove(server_id);
         }
 
@@ -216,11 +216,11 @@ impl<R: Runtime> ConnectionRegistry<R> {
     }
 
     /// List tools from an MCP server through the plugin
-    pub async fn list_tools(&self, server_id: &str) -> Result<serde_json::Value, ProtocollieError> {
+    pub async fn list_tools(&self, server_id: &str) -> Result<serde_json::Value, MCPClientError> {
         eprintln!("DEBUG: Plugin list_tools called for server {}", server_id);
 
         let mut processes = self.processes.lock()
-            .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock processes: {}", e)))?;
+            .map_err(|e| MCPClientError::system_error(&format!("Failed to lock processes: {}", e)))?;
 
         if let Some(process) = processes.get_mut(server_id) {
             // Check if the process is still running using the public method
@@ -251,7 +251,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                     };
                     self.emit_connection_event(event);
 
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         crate::error::ErrorCategory::Connection,
                         "PROCESS_EXITED",
                         &format!("MCP process for server {} has exited", server_id),
@@ -267,7 +267,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                         "DEBUG: Plugin error checking process status for server {}: {}",
                         server_id, e
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         crate::error::ErrorCategory::System,
                         "STATUS_CHECK_FAILED",
                         "Error checking MCP process status",
@@ -306,12 +306,12 @@ impl<R: Runtime> ConnectionRegistry<R> {
                     if let Some(result) = response.get("result") {
                         Ok(result.clone())
                     } else if let Some(error) = response.get("error") {
-                        Err(ProtocollieError::protocol_error(&format!(
+                        Err(MCPClientError::protocol_error(&format!(
                             "MCP server returned error: {}",
                             error
                         )))
                     } else {
-                        Err(ProtocollieError::protocol_error(
+                        Err(MCPClientError::protocol_error(
                             "Invalid JSON-RPC response: missing result and error",
                         ))
                     }
@@ -321,7 +321,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                 }
             }
         } else {
-            return Err(ProtocollieError::new(
+            return Err(MCPClientError::new(
                 crate::error::ErrorCategory::Connection,
                 "NO_PROCESS",
                 &format!("No active MCP process found for server {}", server_id),
@@ -335,12 +335,12 @@ impl<R: Runtime> ConnectionRegistry<R> {
     }
 
     /// Execute a tool on an MCP server through the plugin
-    pub async fn execute_tool(&self, server_id: &str, tool_name: &str, arguments: serde_json::Value) -> Result<(serde_json::Value, u64), ProtocollieError> {
+    pub async fn execute_tool(&self, server_id: &str, tool_name: &str, arguments: serde_json::Value) -> Result<(serde_json::Value, u64), MCPClientError> {
         eprintln!("DEBUG: Plugin execute_tool called for server {} tool {} with args: {}", server_id, tool_name, arguments);
 
         let start_time = std::time::Instant::now();
         let mut processes = self.processes.lock()
-            .map_err(|e| ProtocollieError::system_error(&format!("Failed to lock processes: {}", e)))?;
+            .map_err(|e| MCPClientError::system_error(&format!("Failed to lock processes: {}", e)))?;
 
         if let Some(process) = processes.get_mut(server_id) {
             // Check if the process is still running using the public method
@@ -371,7 +371,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                     };
                     self.emit_connection_event(event);
 
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         crate::error::ErrorCategory::Connection,
                         "PROCESS_EXITED",
                         &format!("MCP process for server {} has exited", server_id),
@@ -387,7 +387,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                         "DEBUG: Plugin error checking process status for server {}: {}",
                         server_id, e
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         crate::error::ErrorCategory::System,
                         "STATUS_CHECK_FAILED",
                         "Error checking MCP process status",
@@ -432,7 +432,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                     if let Some(result) = response.get("result") {
                         Ok((result.clone(), duration_ms))
                     } else if let Some(error) = response.get("error") {
-                        Err(ProtocollieError::new(
+                        Err(MCPClientError::new(
                             crate::error::ErrorCategory::Protocol,
                             "TOOL_EXECUTION_ERROR",
                             &format!("Tool '{}' execution failed", tool_name),
@@ -444,7 +444,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                             "Review server logs for more details",
                         ]))
                     } else {
-                        Err(ProtocollieError::protocol_error(
+                        Err(MCPClientError::protocol_error(
                             "Invalid JSON-RPC response: missing result and error",
                         ))
                     }
@@ -454,7 +454,7 @@ impl<R: Runtime> ConnectionRegistry<R> {
                 }
             }
         } else {
-            return Err(ProtocollieError::new(
+            return Err(MCPClientError::new(
                 crate::error::ErrorCategory::Connection,
                 "NO_PROCESS",
                 &format!("No active MCP process found for server {}", server_id),

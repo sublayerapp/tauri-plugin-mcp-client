@@ -1,6 +1,6 @@
 use tauri_plugin_mcp_client::{
     registry::ConnectionInfo,
-    error::{ProtocollieError, ErrorCategory},
+    error::{MCPClientError, ErrorCategory},
 };
 use serde_json::json;
 
@@ -80,7 +80,7 @@ fn test_execute_tool_request_validation() {
 /// Test error categorization
 #[test]
 fn test_error_categories() {
-    let connection_error = ProtocollieError::new(
+    let connection_error = MCPClientError::new(
         ErrorCategory::Connection,
         "CONNECTION_FAILED",
         "Failed to connect to server"
@@ -91,7 +91,7 @@ fn test_error_categories() {
         _ => panic!("Wrong error category"),
     }
     
-    let protocol_error = ProtocollieError::new(
+    let protocol_error = MCPClientError::new(
         ErrorCategory::Protocol,
         "INVALID_RESPONSE",
         "Invalid JSON-RPC response"
@@ -212,7 +212,7 @@ fn test_message_id_sequential_generation() {
 /// Test error message formatting
 #[test]
 fn test_error_message_formatting() {
-    let error = ProtocollieError::new(
+    let error = MCPClientError::new(
         ErrorCategory::Connection,
         "CONNECTION_TIMEOUT",
         "Connection timed out after 5000ms"

@@ -1,4 +1,4 @@
-use crate::error::{ErrorCategory, ProtocollieError};
+use crate::error::{ErrorCategory, MCPClientError};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ pub struct PendingRequest {
 }
 
 /// Check if Node.js is available and provide helpful error message if not
-fn check_nodejs_availability() -> Result<String, ProtocollieError> {
+fn check_nodejs_availability() -> Result<String, MCPClientError> {
     match std::process::Command::new("node").arg("--version").output() {
         Ok(output) => {
             if output.status.success() {
@@ -28,7 +28,7 @@ fn check_nodejs_availability() -> Result<String, ProtocollieError> {
                 eprintln!("DEBUG: Found Node.js version: {}", version_str);
                 Ok(version_str)
             } else {
-                Err(ProtocollieError::new(
+                Err(MCPClientError::new(
                     ErrorCategory::Command,
                     "NODE_NOT_WORKING",
                     "Node.js is installed but not working properly",
@@ -37,22 +37,22 @@ fn check_nodejs_availability() -> Result<String, ProtocollieError> {
                 .with_suggestions(vec![
                     "Try running 'node --version' in your terminal",
                     "Reinstall Node.js from https://nodejs.org/",
-                    "Restart Protocollie after fixing Node.js",
+                    "Restart the application after fixing Node.js",
                 ]))
             }
         }
-        Err(_) => Err(ProtocollieError::new(
+        Err(_) => Err(MCPClientError::new(
             ErrorCategory::Command,
             "NODE_NOT_FOUND",
             "Node.js is required but not found",
         )
-        .with_details("Protocollie requires Node.js to run MCP servers")
+        .with_details("This plugin requires Node.js to run MCP servers")
         .with_suggestions(vec![
             "Download from: https://nodejs.org/",
             "macOS: brew install node",
             "Ubuntu: sudo apt install nodejs npm",
             "Windows: winget install OpenJS.NodeJS",
-            "After installing Node.js, restart Protocollie",
+            "After installing Node.js, restart the application",
         ])),
     }
 }
@@ -248,7 +248,7 @@ impl MCPProcess {
         serde_json::Value::Object(debug_info)
     }
 
-    pub async fn start(&mut self, command: &str, args: &[String]) -> Result<(), ProtocollieError> {
+    pub async fn start(&mut self, command: &str, args: &[String]) -> Result<(), MCPClientError> {
         eprintln!(
             "DEBUG: Starting MCP process for server {} with command: '{}' args: {:?}",
             self.server_id, command, args
@@ -275,12 +275,12 @@ impl MCPProcess {
             let error_str = e.to_string().to_lowercase();
 
             if error_str.contains("no such file") || error_str.contains("not found") {
-                ProtocollieError::command_not_found(command)
+                MCPClientError::command_not_found(command)
             } else if error_str.contains("permission denied") {
-                ProtocollieError::permission_denied(&format!("command '{}'", command))
+                MCPClientError::permission_denied(&format!("command '{}'", command))
             } else {
                 match command {
-                    "node" | "npx" => ProtocollieError::new(
+                    "node" | "npx" => MCPClientError::new(
                         ErrorCategory::Command,
                         "NODE_START_FAILED",
                         &format!("Failed to start Node.js MCP server '{}'", command),
@@ -291,7 +291,7 @@ impl MCPProcess {
                         "Verify the MCP server script exists and is accessible",
                         "Check you have permission to execute the script",
                     ]),
-                    "python" | "python3" => ProtocollieError::new(
+                    "python" | "python3" => MCPClientError::new(
                         ErrorCategory::Command,
                         "PYTHON_START_FAILED",
                         &format!("Failed to start Python MCP server '{}'", command),
@@ -302,7 +302,7 @@ impl MCPProcess {
                         "Install required Python packages",
                         "Check you have permission to execute the script",
                     ]),
-                    _ => ProtocollieError::new(
+                    _ => MCPClientError::new(
                         ErrorCategory::Command,
                         "COMMAND_START_FAILED",
                         &format!("Failed to start MCP server command '{}'", command),
@@ -454,7 +454,7 @@ impl MCPProcess {
         }
     }
 
-    pub fn send_initialize(&mut self) -> Result<(), ProtocollieError> {
+    pub fn send_initialize(&mut self) -> Result<(), MCPClientError> {
         eprintln!(
             "DEBUG: Starting MCP initialization for server {}",
             self.server_id
@@ -470,7 +470,7 @@ impl MCPProcess {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
                 "clientInfo": {
-                    "name": "protocollie",
+                    "name": "tauri-plugin-mcp-client",
                     "version": "1.0.0"
                 }
             }
@@ -522,9 +522,9 @@ impl MCPProcess {
     pub fn send_message_sync(
         &mut self,
         message: serde_json::Value,
-    ) -> Result<(), ProtocollieError> {
+    ) -> Result<(), MCPClientError> {
         let stdin = self.stdin.as_mut().ok_or_else(|| {
-            ProtocollieError::new(
+            MCPClientError::new(
                 ErrorCategory::Connection,
                 "NO_STDIN",
                 "MCP process not started or stdin not available",
@@ -538,7 +538,7 @@ impl MCPProcess {
         })?;
 
         let message_str = serde_json::to_string(&message).map_err(|e| {
-            ProtocollieError::new(
+            MCPClientError::new(
                 ErrorCategory::Protocol,
                 "JSON_SERIALIZE_FAILED",
                 "Failed to serialize JSON-RPC message",
@@ -556,7 +556,7 @@ impl MCPProcess {
         );
 
         writeln!(stdin, "{}", message_str).map_err(|e| {
-            ProtocollieError::new(
+            MCPClientError::new(
                 ErrorCategory::Connection,
                 "WRITE_FAILED",
                 "Failed to write message to MCP process",
@@ -570,7 +570,7 @@ impl MCPProcess {
         })?;
 
         stdin.flush().map_err(|e| {
-            ProtocollieError::new(
+            MCPClientError::new(
                 ErrorCategory::Connection,
                 "FLUSH_FAILED",
                 "Failed to flush stdin buffer",
@@ -589,9 +589,9 @@ impl MCPProcess {
         &mut self,
         expected_id: u64,
         timeout_ms: u64,
-    ) -> Result<serde_json::Value, ProtocollieError> {
+    ) -> Result<serde_json::Value, MCPClientError> {
         let stdout = self.stdout.as_mut().ok_or_else(|| {
-            ProtocollieError::new(
+            MCPClientError::new(
                 ErrorCategory::Connection,
                 "NO_STDOUT",
                 "MCP process stdout not available",
@@ -629,7 +629,7 @@ impl MCPProcess {
                             all_output
                         );
                     }
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::Connection,
                         "STDOUT_CLOSED",
                         "MCP process closed stdout unexpectedly",
@@ -710,7 +710,7 @@ impl MCPProcess {
                     if !all_output.is_empty() {
                         eprintln!("DEBUG: All stdout output before error: {:?}", all_output);
                     }
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::Connection,
                         "READ_FAILED",
                         "Failed to read from MCP process stdout",
@@ -743,7 +743,7 @@ impl MCPProcess {
         }
 
         Err(
-            ProtocollieError::connection_timeout("MCP server", timeout_ms).with_details(&format!(
+            MCPClientError::connection_timeout("MCP server", timeout_ms).with_details(&format!(
                 "Expected response with ID {} but received {} lines with no match",
                 expected_id,
                 all_output.len()
@@ -790,7 +790,7 @@ pub async fn start_mcp_process(
     server_id: String,
     command: String,
     args: Vec<String>,
-) -> Result<(), ProtocollieError> {
+) -> Result<(), MCPClientError> {
     eprintln!(
         "DEBUG: start_mcp_process called for server {} with command: {} {:?}",
         server_id, command, args
@@ -856,7 +856,7 @@ pub fn stop_mcp_process(server_id: &str) {
 }
 
 /// List tools from a specific MCP server
-pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, ProtocollieError> {
+pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, MCPClientError> {
     eprintln!("DEBUG: list_mcp_tools called for server {}", server_id);
 
     let mut processes = MCP_PROCESSES.lock().unwrap();
@@ -869,7 +869,7 @@ pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, ProtocollieE
                         "DEBUG: MCP process for server {} has exited with status: {:?}",
                         server_id, status
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::Connection,
                         "PROCESS_EXITED",
                         &format!("MCP process for server {} has exited", server_id),
@@ -892,7 +892,7 @@ pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, ProtocollieE
                         "DEBUG: Error checking process status for server {}: {}",
                         server_id, e
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::System,
                         "STATUS_CHECK_FAILED",
                         "Error checking MCP process status",
@@ -932,12 +932,12 @@ pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, ProtocollieE
                 if let Some(result) = response.get("result") {
                     Ok(result.clone())
                 } else if let Some(error) = response.get("error") {
-                    Err(ProtocollieError::protocol_error(&format!(
+                    Err(MCPClientError::protocol_error(&format!(
                         "MCP server returned error: {}",
                         error
                     )))
                 } else {
-                    Err(ProtocollieError::protocol_error(
+                    Err(MCPClientError::protocol_error(
                         "Invalid JSON-RPC response: missing result and error",
                     ))
                 }
@@ -947,7 +947,7 @@ pub fn list_mcp_tools(server_id: &str) -> Result<serde_json::Value, ProtocollieE
             }
         }
     } else {
-        return Err(ProtocollieError::new(
+        return Err(MCPClientError::new(
             ErrorCategory::Connection,
             "NO_PROCESS",
             &format!("No active MCP process found for server {}", server_id),
@@ -965,7 +965,7 @@ pub fn execute_mcp_tool(
     server_id: &str,
     tool_name: &str,
     arguments: serde_json::Value,
-) -> Result<(serde_json::Value, u64), ProtocollieError> {
+) -> Result<(serde_json::Value, u64), MCPClientError> {
     eprintln!(
         "DEBUG: execute_mcp_tool called for server {} tool {} with args: {}",
         server_id, tool_name, arguments
@@ -982,7 +982,7 @@ pub fn execute_mcp_tool(
                         "DEBUG: MCP process for server {} has exited with status: {:?}",
                         server_id, status
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::Connection,
                         "PROCESS_EXITED",
                         &format!("MCP process for server {} has exited", server_id),
@@ -1005,7 +1005,7 @@ pub fn execute_mcp_tool(
                         "DEBUG: Error checking process status for server {}: {}",
                         server_id, e
                     );
-                    return Err(ProtocollieError::new(
+                    return Err(MCPClientError::new(
                         ErrorCategory::System,
                         "STATUS_CHECK_FAILED",
                         "Error checking MCP process status",
@@ -1051,7 +1051,7 @@ pub fn execute_mcp_tool(
                 if let Some(result) = response.get("result") {
                     Ok((result.clone(), duration_ms))
                 } else if let Some(error) = response.get("error") {
-                    Err(ProtocollieError::new(
+                    Err(MCPClientError::new(
                         ErrorCategory::Protocol,
                         "TOOL_EXECUTION_ERROR",
                         &format!("Tool '{}' execution failed", tool_name),
@@ -1063,7 +1063,7 @@ pub fn execute_mcp_tool(
                         "Review server logs for more details",
                     ]))
                 } else {
-                    Err(ProtocollieError::protocol_error(
+                    Err(MCPClientError::protocol_error(
                         "Invalid JSON-RPC response: missing result and error",
                     ))
                 }
@@ -1073,7 +1073,7 @@ pub fn execute_mcp_tool(
             }
         }
     } else {
-        return Err(ProtocollieError::new(
+        return Err(MCPClientError::new(
             ErrorCategory::Connection,
             "NO_PROCESS",
             &format!("No active MCP process found for server {}", server_id),

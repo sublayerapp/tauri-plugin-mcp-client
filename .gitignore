@@ -44,6 +44,8 @@ guest-js/yarn.lock
 # Test coverage
 coverage/
 *.lcov
+target/tarpaulin/
+guest-js/coverage/
 
 # Environment files
 .env

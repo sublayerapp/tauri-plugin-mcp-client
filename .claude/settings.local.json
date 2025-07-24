@@ -3,10 +3,13 @@
     "allow": [
       "Bash(cargo test)",
       "Bash(pnpm test:*)",
-      "Bash(rm:*)",
       "Bash(pnpm install:*)",
       "Bash(npm install:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(cargo install:*)",
+      "Bash(cargo tarpaulin:*)",
+      "Bash(cargo test:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

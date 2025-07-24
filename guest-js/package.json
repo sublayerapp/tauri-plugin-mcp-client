@@ -12,17 +12,19 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "peerDependencies": {
     "@tauri-apps/api": "^2.0.0"
   },
   "devDependencies": {
     "@tauri-apps/api": "^2.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^1.0.0",
-    "@vitest/ui": "^1.0.0"
+    "vitest": "^1.0.0"
   },
   "keywords": [
     "tauri",

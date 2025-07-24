@@ -17,19 +17,52 @@ A comprehensive Tauri plugin for integrating Model Context Protocol (MCP) server
 
 ### Installation
 
-Add the plugin to your Tauri application:
+Add the plugin to your Tauri application directly from GitHub:
 
-```bash
-# Add Rust plugin dependency
-cargo add tauri-plugin-mcp
+#### Option 1: Git Dependencies (Recommended)
 
-# Add TypeScript API package
-npm install tauri-plugin-mcp-api
-# or
-pnpm add tauri-plugin-mcp-api
-# or
-yarn add tauri-plugin-mcp-api
+**Add to your `src-tauri/Cargo.toml`:**
+```toml
+[dependencies]
+tauri-plugin-mcp-client = { git = "https://github.com/username/tauri-plugin-mcp-client" }
 ```
+
+**Install TypeScript API:**
+```bash
+# Install from GitHub
+npm install github:username/tauri-plugin-mcp-client#subdirectory=guest-js
+# or with pnpm
+pnpm add github:username/tauri-plugin-mcp-client#subdirectory=guest-js
+```
+
+#### Option 2: Local Development
+
+**Clone the repository:**
+```bash
+git clone https://github.com/username/tauri-plugin-mcp-client
+cd tauri-plugin-mcp-client
+```
+
+**Add to your `src-tauri/Cargo.toml`:**
+```toml
+[dependencies]
+tauri-plugin-mcp-client = { path = "../tauri-plugin-mcp-client" }
+```
+
+**Build and link TypeScript API:**
+```bash
+cd tauri-plugin-mcp-client/guest-js
+pnpm install
+pnpm build
+```
+
+Then in your frontend `package.json`:
+```json
+{
+  "dependencies": {
+    "tauri-plugin-mcp-client-api": "file:../tauri-plugin-mcp-client/guest-js"
+  }
+}
 
 ### Basic Setup
 
@@ -38,12 +71,12 @@ yarn add tauri-plugin-mcp-api
 In your `src-tauri/src/lib.rs`:
 
 ```rust
-use tauri_plugin_mcp;
+use tauri_plugin_mcp_client;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_mcp::init())
+        .plugin(tauri_plugin_mcp_client::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -52,7 +85,7 @@ pub fn run() {
 #### 2. Use the API (TypeScript)
 
 ```typescript
-import { mcp, onServerConnected } from 'tauri-plugin-mcp-api';
+import { mcp, onServerConnected } from 'tauri-plugin-mcp-client-api';
 
 // Connect to an MCP server
 await mcp.connectServer({
@@ -367,6 +400,28 @@ See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 - [Basic Integration](examples/basic-integration/) - Simple MCP server connection
 - [Game Integration](examples/game-integration/) - Using MCP in a game context
 - [Multi-Server Setup](examples/multi-server/) - Managing multiple MCP servers
+
+## Coming Soon: Registry Distribution
+
+We plan to publish this plugin to official registries for easier installation:
+
+### Future Registry Installation
+
+**Cargo (Rust):**
+```bash
+cargo add tauri-plugin-mcp-client
+```
+
+**npm (TypeScript):**
+```bash
+npm install tauri-plugin-mcp-client-api
+# or
+pnpm add tauri-plugin-mcp-client-api
+# or
+yarn add tauri-plugin-mcp-client-api
+```
+
+For now, please use the GitHub-based installation methods described above.
 
 ## Migration Guide
 

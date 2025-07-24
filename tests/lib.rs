@@ -15,7 +15,7 @@ mod test_runner {
         use tauri_plugin_mcp_client::{
             registry::ConnectionRegistry,
             process::MCPProcess,
-            error::ProtocollieError,
+            error::MCPClientError,
         };
         
         // Create basic structures to verify they work
@@ -29,9 +29,9 @@ mod test_runner {
     /// Test error categorization
     #[test]
     fn test_error_categories() {
-        use tauri_plugin_mcp_client::error::{ProtocollieError, ErrorCategory};
+        use tauri_plugin_mcp_client::error::{MCPClientError, ErrorCategory};
         
-        let error = ProtocollieError::new(
+        let error = MCPClientError::new(
             ErrorCategory::Connection,
             "TEST_ERROR",
             "Test error message"

@@ -5,6 +5,11 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     includeSource: ['src/**/*.{ts,js}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'dist/', 'tests/'],
+    },
   },
   define: {
     'import.meta.vitest': undefined,
